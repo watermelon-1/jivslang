@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鸡与狼 - 自动对战</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Microsoft YaHei', sans-serif;
+    color: #eee;
+}
+.container {
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+}
+.panel {
+    background: #16213e;
+    border-radius: 12px;
+    padding: 18px;
+    width: 210px;
+    display: flex;
+    flex-direction: column;
+}
+.panel.wolf-panel { border-top: 3px solid #e94560; }
+.panel.chicken-panel { border-top: 3px solid #ffc107; }
+.panel h2 {
+    font-size: 17px;
+    margin-bottom: 14px;
+    text-align: center;
+}
+.panel.wolf-panel h2 { color: #e94560; }
+.panel.chicken-panel h2 { color: #ffc107; }
+.panel h3 {
+    font-size: 13px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 10px 0 8px;
+    border-bottom: 1px solid #2a2a4a;
+    padding-bottom: 4px;
+}
+.panel label {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 3px;
+    color: #999;
+}
+.panel input {
+    width: 100%;
+    padding: 7px 8px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background: #0f3460;
+    color: #fff;
+    font-size: 13px;
+    margin-bottom: 10px;
+    outline: none;
+}
+.panel input:focus { border-color: #e94560; }
+.center-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.controls {
+    display: flex;
+    gap: 8px;
+    width: 600px;
+}
+.btn {
+    padding: 10px 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+    flex: 1;
+}
+.btn-start {
+    background: #e94560;
+    color: #fff;
+}
+.btn-start:hover { background: #c73550; }
+.btn-reset {
+    background: #0f3460;
+    color: #ccc;
+}
+.btn-reset:hover { background: #1a4a7a; }
+.btn-pause {
+    background: #533483;
+    color: #fff;
+}
+.btn-pause:hover { background: #6a44a5; }
+.controls .btn-mute {
+    background: #1a3a5c;
+    color: #aaa;
+    flex: 0.6;
+}
+.controls .btn-mute:hover { background: #2a4a7c; }
+canvas {
+    border-radius: 12px;
+    box-shadow: 0 0 30px rgba(233, 69, 96, 0.15);
+}
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    width: 600px;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+.status-item { text-align: center; flex: 1; }
+.status-item .label { color: #888; font-size: 11px; }
+.status-item .value { font-size: 22px; font-weight: bold; }
+.status-item.chicken .value { color: #ffc107; }
+.status-item.wolf .value { color: #9e9e9e; }
+.result-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    flex-direction: column;
+}
+.result-overlay.show { display: flex; }
+.result-text {
+    font-size: 48px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+.result-text.chicken-win { color: #ffc107; }
+.result-text.wolf-win { color: #e94560; }
+.result-text.draw { color: #888; }
+.result-sub {
+    font-size: 18px;
+    color: #aaa;
+    margin-bottom: 30px;
+}
+.btn-restart {
+    padding: 12px 40px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    background: #e94560;
+    color: #fff;
+    transition: 0.2s;
+}
+.btn-restart:hover { background: #c73550; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 左侧面板：狼 -->
+    <div class="panel wolf-panel">
+        <h2>🐺 狼</h2>
+        <h3>基础属性</h3>
+        <label>体型 (米×米)</label>
+        <input type="number" id="wolfSize" value="2" min="0.5" step="0.1">
+        <label>血量 (HP)</label>
+        <input type="number" id="wolfHP" value="300" min="1">
+        <label>近战攻击力</label>
+        <input type="number" id="wolfDamage" value="50" min="1">
+        <label>移动速度 (m/s)</label>
+        <input type="number" id="wolfSpeed" value="2" min="0.1" step="0.1">
+
+        <h3>激光攻击</h3>
+        <label>冷却时间 (秒)</label>
+        <input type="number" id="laserCooldown" value="5" min="1" step="0.5">
+        <label>蓄力时间 (秒)</label>
+        <input type="number" id="laserChargeTime" value="2" min="0.5" step="0.5">
+        <label>激光伤害</label>
+        <input type="number" id="laserDamage" value="50" min="1">
+
+        <h3>击杀回复</h3>
+        <label>杀鸡回血</label>
+        <input type="number" id="wolfKillHeal" value="50" min="0" step="5">
+        <label>吃蛋回血</label>
+        <input type="number" id="eggHealAmount" value="30" min="0" step="5">
+    </div>
+
+    <!-- 中间：决战平台 -->
+    <div class="center-area">
+        <div class="status-bar">
+            <div class="status-item chicken">
+                <div class="label">🐔 鸡</div>
+                <div class="value" id="chickenHpDisplay">100</div>
+            </div>
+            <div class="status-item" style="color:#888">
+                <div class="label">⚔️ 决战</div>
+                <div class="value" id="timeDisplay" style="color:#888;font-size:28px;">0s</div>
+            </div>
+            <div class="status-item wolf">
+                <div class="label">🐺 狼</div>
+                <div class="value" id="wolfHpDisplay">150</div>
+            </div>
+        </div>
+        <canvas id="canvas" width="600" height="600"></canvas>
+        <div class="controls">
+            <button class="btn btn-start" id="btnStart" onclick="game.start()">▶ 开始</button>
+            <button class="btn btn-pause" id="btnPause" onclick="game.togglePause()">⏸ 暂停</button>
+            <button class="btn btn-reset" onclick="game.reset()">🔄 重置</button>
+            <button class="btn btn-reset btn-mute" id="btnMute" onclick="SFX.toggleMute()">🔊 音效</button>
+        </div>
+    </div>
+
+    <!-- 右侧面板：鸡 -->
+    <div class="panel chicken-panel">
+        <h2>🐔 鸡</h2>
+        <h3>基础属性</h3>
+        <label>体型 (米×米)</label>
+        <input type="number" id="chickenSize" value="1" min="0.5" step="0.1">
+        <label>血量 (HP)</label>
+        <input type="number" id="chickenHP" value="100" min="1">
+        <label>鸡蛋攻击力</label>
+        <input type="number" id="eggDamage" value="10" min="1">
+        <label>移动速度 (m/s)</label>
+        <input type="number" id="chickenSpeed" value="1" min="0.1" step="0.1">
+
+        <h3>鸡蛋</h3>
+        <label>飞行速度 (m/s)</label>
+        <input type="number" id="eggSpeed" value="2" min="0.5" step="0.1">
+        <label>发射间隔 (秒)</label>
+        <input type="number" id="eggCooldown" value="1" min="0.1" step="0.1">
+
+        <h3>繁殖</h3>
+        <label>下蛋间隔 (秒)</label>
+        <input type="number" id="hatchInterval" value="10" min="1" step="1">
+        <label>孵化时间 (秒)</label>
+        <input type="number" id="hatchTime" value="3" min="0.5" step="0.5">
+    </div>
+</div>
+
+<!-- 结果弹窗 -->
+<div class="result-overlay" id="resultOverlay">
+    <div class="result-text" id="resultText"></div>
+    <div class="result-sub" id="resultSub"></div>
+    <button class="btn-restart" onclick="game.reset()">🔄 再来一局</button>
+</div>
+
+<script>
+// ==================== 游戏引擎 ====================
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const SCALE = 60; // pixels per meter
+
+// 默认配置
+const DEFAULTS = {
+    worldW: 10,
+    worldH: 10,
+    chickenSize: 1,
+    wolfSize: 2,
+    chickenHP: 100,
+    wolfHP: 300,
+    chickenSpeed: 1,
+    wolfSpeed: 2,
+    eggSpeed: 2,
+    eggDamage: 10,
+    wolfDamage: 50,
+    eggCooldown: 1.0,
+    wolfAtkCooldown: 0.3,
+    eggRadius: 0.15,
+    laserCooldown: 5.0,
+    laserChargeTime: 2.0,
+    laserDamage: 50,
+    laserBeamDuration: 0.4,
+    wolfKillHeal: 50,
+    hatchInterval: 10.0,
+    hatchTime: 3.0,
+    eggHealAmount: 30,
+};
+
+let config = { ...DEFAULTS };
+
+// ==================== 图片资源 ====================
+const IMG_WOLF = new Image();
+IMG_WOLF.src = 'wolf.png';
+IMG_WOLF.onload = () => { if (game && game.draw) game.draw(); };
+const IMG_CHICKEN = new Image();
+IMG_CHICKEN.src = 'chicken.png';
+IMG_CHICKEN.onload = () => { if (game && game.draw) game.draw(); };
+
+// ==================== 音效系统 ====================
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+const SFX = {
+    muted: false,
+
+    ctx() {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+    },
+
+    toggleMute() {
+        this.muted = !this.muted;
+        document.getElementById('btnMute').textContent = this.muted ? '🔇 静音' : '🔊 音效';
+    },
+
+    _tone(freq, dur, type = 'sine', vol = 0.2, freqEnd = null) {
+        if (this.muted) return;
+        try {
+            const ctx = this.ctx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            if (freqEnd) osc.frequency.linearRampToValueAtTime(freqEnd, ctx.currentTime + dur);
+            gain.gain.setValueAtTime(vol, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + dur);
+        } catch (e) { /* ignore audio errors */ }
+    },
+
+    _noise(dur, vol = 0.2, freq = 1500) {
+        if (this.muted) return;
+        try {
+            const ctx = this.ctx();
+            const len = Math.floor(ctx.sampleRate * dur);
+            const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = freq;
+            filter.Q.value = 0.5;
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(vol, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+            src.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            src.start(ctx.currentTime);
+        } catch (e) { /* ignore */ }
+    },
+
+    eggLaunch()  { this._tone(350, 0.1, 'sine', 0.15, 700); },
+    eggHit()     { this._noise(0.1, 0.2, 2500); },
+    wolfBite()   { this._tone(90, 0.2, 'sawtooth', 0.18, 35); },
+    wallBounce() { this._tone(130, 0.05, 'triangle', 0.08); },
+    collide()    { this._tone(200, 0.06, 'triangle', 0.12); },
+    wolfRoar()   { this._tone(60, 0.4, 'sawtooth', 0.25, 25); },
+    laserZap()   { this._tone(2000, 0.15, 'square', 0.12, 4000); },
+
+    gameWin() {
+        this._tone(523, 0.15, 'sine', 0.18);
+        setTimeout(() => this._tone(659, 0.2, 'sine', 0.2), 150);
+        setTimeout(() => this._tone(784, 0.3, 'sine', 0.22), 350);
+    },
+    gameLose() {
+        this._tone(330, 0.2, 'sawtooth', 0.15);
+        setTimeout(() => this._tone(220, 0.3, 'sawtooth', 0.18), 250);
+        setTimeout(() => this._tone(165, 0.4, 'sawtooth', 0.2), 550);
+    },
+    gameDraw() {
+        this._tone(392, 0.3, 'triangle', 0.12);
+        setTimeout(() => this._tone(392, 0.3, 'triangle', 0.12), 350);
+    },
+};
+
+// 读取面板参数
+function readConfig() {
+    config.chickenHP = parseInt(document.getElementById('chickenHP').value) || 100;
+    config.wolfHP = parseInt(document.getElementById('wolfHP').value) || 150;
+    config.eggDamage = parseInt(document.getElementById('eggDamage').value) || 10;
+    config.wolfDamage = parseInt(document.getElementById('wolfDamage').value) || 30;
+    config.chickenSpeed = parseFloat(document.getElementById('chickenSpeed').value) || 1;
+    config.wolfSpeed = parseFloat(document.getElementById('wolfSpeed').value) || 1;
+    config.eggSpeed = parseFloat(document.getElementById('eggSpeed').value) || 3;
+    config.eggCooldown = parseFloat(document.getElementById('eggCooldown').value) || 1;
+    config.laserCooldown = parseFloat(document.getElementById('laserCooldown').value) || 5;
+    config.laserChargeTime = parseFloat(document.getElementById('laserChargeTime').value) || 2;
+    config.laserDamage = parseInt(document.getElementById('laserDamage').value) || 50;
+    config.hatchInterval = parseFloat(document.getElementById('hatchInterval').value) || 10;
+    config.hatchTime = parseFloat(document.getElementById('hatchTime').value) || 3;
+    config.eggHealAmount = parseInt(document.getElementById('eggHealAmount').value) || 30;
+    config.chickenSize = parseFloat(document.getElementById('chickenSize').value) || 1;
+    config.wolfSize = parseFloat(document.getElementById('wolfSize').value) || 2;
+    config.wolfKillHeal = parseInt(document.getElementById('wolfKillHeal').value) || 50;
+}
+
+// ==================== 实体类 ====================
+
+class Entity {
+    constructor(x, y, vx, vy, size) {
+        this.x = x;       // 中心 x (米)
+        this.y = y;       // 中心 y (米)
+        this.vx = vx;     // 速度 x (米/秒)
+        this.vy = vy;     // 速度 y (米/秒)
+        this.size = size; // 边长 (米)
+        this.half = size / 2;
+    }
+
+    get left()   { return this.x - this.half; }
+    get right()  { return this.x + this.half; }
+    get top()    { return this.y - this.half; }
+    get bottom() { return this.y + this.half; }
+
+    // 检测与墙壁碰撞并反弹
+    checkWallCollision(worldW, worldH) {
+        let bounced = false;
+        if (this.left <= 0) {
+            this.x = this.half;
+            this.vx = Math.abs(this.vx);
+            bounced = true;
+        }
+        if (this.right >= worldW) {
+            this.x = worldW - this.half;
+            this.vx = -Math.abs(this.vx);
+            bounced = true;
+        }
+        if (this.top <= 0) {
+            this.y = this.half;
+            this.vy = Math.abs(this.vy);
+            bounced = true;
+        }
+        if (this.bottom >= worldH) {
+            this.y = worldH - this.half;
+            this.vy = -Math.abs(this.vy);
+            bounced = true;
+        }
+        if (bounced) SFX.wallBounce();
+        return bounced;
+    }
+
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+    }
+
+    // AABB 碰撞检测
+    collidesWith(other) {
+        return (
+            Math.abs(this.x - other.x) < this.half + other.half &&
+            Math.abs(this.y - other.y) < this.half + other.half
+        );
+    }
+}
+
+class Chicken extends Entity {
+    constructor(x, y, vx, vy) {
+        super(x, y, vx, vy, config.chickenSize);
+        this.hp = config.chickenHP;
+        this.maxHp = config.chickenHP;
+        this.eggTimer = 0;
+        this.flashTimer = 0;
+        this.hatchTimer = 0;
+    }
+}
+
+class Wolf extends Entity {
+    constructor(x, y, vx, vy) {
+        super(x, y, vx, vy, config.wolfSize);
+        this.hp = config.wolfHP;
+        this.maxHp = config.wolfHP;
+        this.atkCooldown = 0;
+        this.flashTimer = 0;
+        this.laserTimer = 0;
+        this.laserCharge = 0;    // >0 表示正在蓄力，结束后发射激光
+        this.laserTargetX = 0;   // 蓄力开始时记录的鸡位置
+        this.laserTargetY = 0;
+        this.savedVx = 0;
+        this.savedVy = 0;
+    }
+}
+
+class Egg {
+    constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.radius = config.eggRadius;
+        this.alive = true;
+    }
+
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+    }
+
+    // 碰墙消失
+    checkWall(worldW, worldH) {
+        if (this.x < 0 || this.x > worldW || this.y < 0 || this.y > worldH) {
+            this.alive = false;
+        }
+    }
+
+    // 命中狼
+    hitsWolf(wolf) {
+        const dx = this.x - wolf.x;
+        const dy = this.y - wolf.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return dist < wolf.half + this.radius;
+    }
+}
+
+class HatchEgg {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 0.35;
+        this.timer = config.hatchTime;
+        this.alive = true;
+    }
+
+    hitsWolf(wolf) {
+        const dx = this.x - wolf.x;
+        const dy = this.y - wolf.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return dist < wolf.half + this.radius;
+    }
+}
+
+// ==================== 游戏主类 ====================
+
+const game = {
+    chickens: [],
+    wolf: null,
+    eggs: [],
+    hatchEggs: [],
+    running: false,
+    paused: false,
+    gameOver: false,
+    elapsedTime: 0,
+    lastTime: 0,
+    laserBeam: null,
+
+    reset() {
+        readConfig();
+        this.running = false;
+        this.paused = false;
+        this.gameOver = false;
+        this.eggs = [];
+        this.hatchEggs = [];
+        this.elapsedTime = 0;
+        this.lastTime = 0;
+        this.laserBeam = null;
+
+        document.getElementById('resultOverlay').classList.remove('show');
+        document.getElementById('btnPause').textContent = '⏸ 暂停';
+
+        // 随机生成不重叠的初始位置
+        const cHalf = config.chickenSize / 2;
+        const wHalf = config.wolfSize / 2;
+        const minDist = cHalf + wHalf;
+        let cx, cy, wx, wy;
+        do {
+            cx = cHalf + Math.random() * (config.worldW - config.chickenSize);
+            cy = cHalf + Math.random() * (config.worldH - config.chickenSize);
+            wx = wHalf + Math.random() * (config.worldW - config.wolfSize);
+            wy = wHalf + Math.random() * (config.worldH - config.wolfSize);
+        } while (Math.abs(cx - wx) < minDist && Math.abs(cy - wy) < minDist);
+
+        // 随机速度方向
+        const randAngle = () => Math.random() * Math.PI * 2;
+        const a1 = randAngle();
+        const a2 = randAngle();
+        const chicken = new Chicken(cx, cy,
+            Math.cos(a1) * config.chickenSpeed,
+            Math.sin(a1) * config.chickenSpeed);
+        this.chickens = [chicken];
+        this.wolf = new Wolf(wx, wy,
+            Math.cos(a2) * config.wolfSpeed,
+            Math.sin(a2) * config.wolfSpeed);
+
+        this.updateDisplay();
+        this.draw();
+    },
+
+    start() {
+        if (this.gameOver) return;
+        readConfig();
+        // 更新速度和血量
+        this._syncConfig();
+        if (!this.running) {
+            this.running = true;
+            this.lastTime = performance.now();
+            this._loop(this.lastTime);
+        }
+        this.paused = false;
+        document.getElementById('btnPause').textContent = '⏸ 暂停';
+    },
+
+    togglePause() {
+        if (!this.running || this.gameOver) return;
+        this.paused = !this.paused;
+        document.getElementById('btnPause').textContent = this.paused ? '▶ 继续' : '⏸ 暂停';
+        if (!this.paused) {
+            this.lastTime = performance.now();
+            this._loop(this.lastTime);
+        }
+    },
+
+    _syncConfig() {
+        // 更新速度（保持方向，改变大小）
+        for (const chicken of this.chickens) {
+            const spd = Math.sqrt(chicken.vx ** 2 + chicken.vy ** 2);
+            if (spd > 0.001) {
+                const ratio = config.chickenSpeed / spd;
+                chicken.vx *= ratio;
+                chicken.vy *= ratio;
+            }
+            chicken.maxHp = config.chickenHP;
+            chicken.hp = Math.min(chicken.hp, config.chickenHP);
+        }
+        if (this.wolf) {
+            const spd = Math.sqrt(this.wolf.vx ** 2 + this.wolf.vy ** 2);
+            if (spd > 0.001) {
+                const ratio = config.wolfSpeed / spd;
+                this.wolf.vx *= ratio;
+                this.wolf.vy *= ratio;
+            }
+            this.wolf.maxHp = config.wolfHP;
+            this.wolf.hp = Math.min(this.wolf.hp, config.wolfHP);
+        }
+    },
+
+    _loop(timestamp) {
+        if (!this.running || this.paused || this.gameOver) return;
+
+        let dt = (timestamp - this.lastTime) / 1000;
+        this.lastTime = timestamp;
+
+        // 防止大帧跳跃
+        if (dt > 0.1) dt = 0.1;
+
+        this.update(dt);
+        this.draw();
+        this.updateDisplay();
+
+        if (!this.gameOver) {
+            requestAnimationFrame((t) => this._loop(t));
+        }
+    },
+
+    update(dt) {
+        if (this.gameOver) return;
+        this.elapsedTime += dt;
+
+        const w = this.wolf;
+        const targetChicken = this.chickens.length > 0 ? this.chickens[0] : null;
+
+        // 更新狼位置
+        w.update(dt);
+        w.checkWallCollision(config.worldW, config.worldH);
+
+        // 更新所有鸡
+        for (const c of this.chickens) {
+            c.update(dt);
+            c.checkWallCollision(config.worldW, config.worldH);
+            if (c.flashTimer > 0) c.flashTimer -= dt;
+        }
+        if (w.flashTimer > 0) w.flashTimer -= dt;
+
+        // 狼与每只鸡的碰撞检测
+        for (const c of this.chickens) {
+            if (c.hp <= 0) continue;
+            if (c.collidesWith(w)) {
+                this._separateEntities(c, w);
+                if (w.atkCooldown <= 0) {
+                    c.hp -= config.wolfDamage;
+                    c.flashTimer = 0.15;
+                    w.atkCooldown = config.wolfAtkCooldown;
+                    SFX.wolfBite();
+                }
+            }
+        }
+        if (w.atkCooldown > 0) w.atkCooldown -= dt;
+
+        // 狼激光攻击（以第一只存活的鸡为目标）
+        if (targetChicken) {
+            if (w.laserCharge > 0) {
+                w.laserCharge -= dt;
+                if (w.laserCharge <= 0) {
+                    const ldx = w.laserTargetX - w.x;
+                    const ldy = w.laserTargetY - w.y;
+                    const ldist = Math.sqrt(ldx * ldx + ldy * ldy);
+                    if (ldist > 0.001) {
+                        const lnx = ldx / ldist;
+                        const lny = ldy / ldist;
+                        let tMax = Infinity;
+                        if (lnx > 0) tMax = Math.min(tMax, (config.worldW - w.x) / lnx);
+                        else if (lnx < 0) tMax = Math.min(tMax, -w.x / lnx);
+                        if (lny > 0) tMax = Math.min(tMax, (config.worldH - w.y) / lny);
+                        else if (lny < 0) tMax = Math.min(tMax, -w.y / lny);
+                        const endX = w.x + lnx * tMax;
+                        const endY = w.y + lny * tMax;
+                        this.laserBeam = { x1: w.x, y1: w.y, x2: endX, y2: endY, timer: config.laserBeamDuration };
+                        // 激光检测路径上所有鸡
+                        for (const c of this.chickens) {
+                            if (c.hp > 0 && this._rayHitsAABB(w.x, w.y, lnx, lny, c)) {
+                                c.hp -= config.laserDamage;
+                                c.flashTimer = 0.2;
+                            }
+                        }
+                        // 激光命中孵化蛋 → 蛋消失，狼回血
+                        for (const he of this.hatchEggs) {
+                            if (he.alive && this._rayHitsCircle(w.x, w.y, lnx, lny, he.x, he.y, he.radius)) {
+                                w.hp = Math.min(w.maxHp, w.hp + config.eggHealAmount);
+                                he.alive = false;
+                                SFX.eggHit();
+                            }
+                        }
+                        SFX.laserZap();
+                    }
+                    w.vx = w.savedVx;
+                    w.vy = w.savedVy;
+                }
+            } else {
+                w.laserTimer += dt;
+                if (w.laserTimer >= config.laserCooldown) {
+                    w.laserTimer = 0;
+                    w.laserTargetX = targetChicken.x;
+                    w.laserTargetY = targetChicken.y;
+                    w.laserCharge = config.laserChargeTime;
+                    w.savedVx = w.vx;
+                    w.savedVy = w.vy;
+                    w.vx = 0;
+                    w.vy = 0;
+                    SFX.wolfRoar();
+                }
+            }
+        }
+
+        // 每只鸡的攻击和繁殖计时器
+        for (const c of this.chickens) {
+            if (c.hp <= 0) continue;
+            // 攻击鸡蛋计时器
+            c.eggTimer += dt;
+            if (c.eggTimer >= config.eggCooldown) {
+                c.eggTimer -= config.eggCooldown;
+                this._fireEgg(c);
+            }
+            // 孵化蛋计时器
+            c.hatchTimer += dt;
+            if (c.hatchTimer >= config.hatchInterval) {
+                c.hatchTimer -= config.hatchInterval;
+                this.hatchEggs.push(new HatchEgg(c.x, c.y));
+                SFX.eggLaunch();
+            }
+        }
+
+        // 更新飞行鸡蛋
+        for (const egg of this.eggs) {
+            egg.update(dt);
+            egg.checkWall(config.worldW, config.worldH);
+            if (egg.alive && egg.hitsWolf(w)) {
+                w.hp -= config.eggDamage;
+                w.flashTimer = 0.15;
+                egg.alive = false;
+                SFX.eggHit();
+            }
+        }
+        this.eggs = this.eggs.filter(e => e.alive);
+
+        // 更新孵化蛋 + 狼吃蛋检测
+        for (const he of this.hatchEggs) {
+            he.timer -= dt;
+            // 狼碰撞孵化蛋 → 吃掉回血
+            if (he.alive && he.hitsWolf(w) && w.atkCooldown <= 0) {
+                w.hp = Math.min(w.maxHp, w.hp + config.eggHealAmount);
+                he.alive = false;
+                w.atkCooldown = config.wolfAtkCooldown;
+                SFX.eggHit();
+            }
+            // 孵化完成 → 生成新鸡
+            if (he.alive && he.timer <= 0) {
+                he.alive = false;
+                const a = Math.random() * Math.PI * 2;
+                const nc = new Chicken(he.x, he.y,
+                    Math.cos(a) * config.chickenSpeed,
+                    Math.sin(a) * config.chickenSpeed);
+                this.chickens.push(nc);
+                // 新生音效
+                SFX._tone(600, 0.1, 'sine', 0.12, 900);
+            }
+        }
+        this.hatchEggs = this.hatchEggs.filter(e => e.alive);
+
+        // 移除死鸡，每死一只狼回血
+        const deadCount = this.chickens.filter(c => c.hp <= 0).length;
+        if (deadCount > 0) {
+            w.hp = Math.min(w.maxHp, w.hp + config.wolfKillHeal * deadCount);
+        }
+        this.chickens = this.chickens.filter(c => c.hp > 0);
+
+        // 更新激光束计时器
+        if (this.laserBeam) {
+            this.laserBeam.timer -= dt;
+            if (this.laserBeam.timer <= 0) this.laserBeam = null;
+        }
+
+        // 检查胜负
+        this._checkGameEnd();
+    },
+
+    _fireEgg(chicken) {
+        const w = this.wolf;
+        const dx = w.x - chicken.x;
+        const dy = w.y - chicken.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 0.001) return;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        this.eggs.push(new Egg(chicken.x, chicken.y,
+            nx * config.eggSpeed,
+            ny * config.eggSpeed));
+        SFX.eggLaunch();
+    },
+
+    // 射线与AABB相交检测
+    _rayHitsAABB(ox, oy, dx, dy, entity) {
+        let tMin = -Infinity, tMax = Infinity;
+        const half = entity.half;
+
+        // X轴检测
+        if (Math.abs(dx) < 0.0001) {
+            if (ox < entity.left || ox > entity.right) return false;
+        } else {
+            let t1 = (entity.left - ox) / dx;
+            let t2 = (entity.right - ox) / dx;
+            if (t1 > t2) [t1, t2] = [t2, t1];
+            tMin = Math.max(tMin, t1);
+            tMax = Math.min(tMax, t2);
+            if (tMin > tMax) return false;
+        }
+
+        // Y轴检测
+        if (Math.abs(dy) < 0.0001) {
+            if (oy < entity.top || oy > entity.bottom) return false;
+        } else {
+            let t1 = (entity.top - oy) / dy;
+            let t2 = (entity.bottom - oy) / dy;
+            if (t1 > t2) [t1, t2] = [t2, t1];
+            tMin = Math.max(tMin, t1);
+            tMax = Math.min(tMax, t2);
+            if (tMin > tMax) return false;
+        }
+
+        return tMin >= 0 && tMax >= 0;
+    },
+
+    // 射线与圆相交检测
+    _rayHitsCircle(ox, oy, dx, dy, cx, cy, cr) {
+        const fx = ox - cx;
+        const fy = oy - cy;
+        const a = dx * dx + dy * dy;
+        const b = 2 * (fx * dx + fy * dy);
+        const c = fx * fx + fy * fy - cr * cr;
+        let disc = b * b - 4 * a * c;
+        if (disc < 0) return false;
+        disc = Math.sqrt(disc);
+        const t1 = (-b - disc) / (2 * a);
+        const t2 = (-b + disc) / (2 * a);
+        return (t1 >= 0 && t1 <= 1e9) || (t2 >= 0 && t2 <= 1e9);
+    },
+
+    _separateEntities(a, b) {
+        // 碰撞法线方向（a → b）
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 0.001) {
+            // 完全重叠，弹开
+            a.x -= 0.1; b.x += 0.1;
+            a.vx = -Math.abs(a.vx); b.vx = Math.abs(b.vx);
+            return;
+        }
+
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        // 分离重叠
+        const overlap = (a.half + b.half) - dist;
+        if (overlap > 0) {
+            a.x -= nx * overlap / 2;
+            a.y -= ny * overlap / 2;
+            b.x += nx * overlap / 2;
+            b.y += ny * overlap / 2;
+        }
+
+        // 反射速度（沿法线方向弹开，速率大小不变）
+        const a_vn = a.vx * nx + a.vy * ny;
+        const b_vn = b.vx * nx + b.vy * ny;
+
+        // 只在互相靠近时反射
+        if (a_vn - b_vn > 0) {
+            a.vx -= 2 * a_vn * nx;
+            a.vy -= 2 * a_vn * ny;
+            b.vx -= 2 * b_vn * nx;
+            b.vy -= 2 * b_vn * ny;
+            SFX.collide();
+        }
+    },
+
+    _checkGameEnd() {
+        const allChickensDead = this.chickens.length === 0;
+        const noEggsAlive = this.hatchEggs.filter(e => e.alive).length === 0;
+        const wDead = this.wolf.hp <= 0;
+
+        if (allChickensDead && noEggsAlive && wDead) {
+            this._endGame('draw');
+        } else if (allChickensDead && noEggsAlive) {
+            this._endGame('wolf');
+        } else if (wDead) {
+            this._endGame('chicken');
+        }
+    },
+
+    _endGame(winner) {
+        this.gameOver = true;
+        this.running = false;
+        const overlay = document.getElementById('resultOverlay');
+        const text = document.getElementById('resultText');
+        const sub = document.getElementById('resultSub');
+
+        overlay.classList.add('show');
+        text.className = 'result-text';
+
+        if (winner === 'chicken') {
+            const count = this.chickens.length;
+            text.textContent = '🐔 鸡获胜！';
+            text.classList.add('chicken-win');
+            sub.textContent = `狼被鸡蛋砸死了！剩余${count}只鸡，用时 ${this.elapsedTime.toFixed(1)} 秒`;
+            SFX.gameWin();
+        } else if (winner === 'wolf') {
+            text.textContent = '🐺 狼获胜！';
+            text.classList.add('wolf-win');
+            sub.textContent = `鸡被狼吃掉了！用时 ${this.elapsedTime.toFixed(1)} 秒`;
+            SFX.gameLose();
+        } else {
+            text.textContent = '🤝 平局！';
+            text.classList.add('draw');
+            sub.textContent = `同归于尽！用时 ${this.elapsedTime.toFixed(1)} 秒`;
+            SFX.gameDraw();
+        }
+    },
+
+    draw() {
+        const W = canvas.width;
+        const H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        // 背景 - 鸡舍地板
+        ctx.fillStyle = '#d4a574';
+        ctx.fillRect(0, 0, W, H);
+
+        // 木纹纹理
+        ctx.strokeStyle = '#c49564';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < config.worldW; i++) {
+            const x = i * SCALE;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, H);
+            ctx.stroke();
+        }
+
+        // 墙壁
+        ctx.strokeStyle = '#5d3a1a';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(0, 0, W, H);
+
+        // 画网格线（虚线，帮助判断位置）
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 8]);
+        for (let i = 1; i < config.worldW; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * SCALE, 0);
+            ctx.lineTo(i * SCALE, H);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, i * SCALE);
+            ctx.lineTo(W, i * SCALE);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        // 画孵化蛋
+        for (const he of this.hatchEggs) {
+            const hx = he.x * SCALE;
+            const hy = he.y * SCALE;
+            const hr = he.radius * SCALE;
+            const progress = 1 - (he.timer / config.hatchTime);
+
+            // 光晕
+            ctx.fillStyle = `rgba(255, 215, 0, ${0.2 + progress * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(hx, hy, hr * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 主体
+            ctx.fillStyle = '#fffef0';
+            ctx.beginPath();
+            ctx.ellipse(hx, hy, hr, hr * 1.25, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#d4a017';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 进度环
+            ctx.strokeStyle = '#4caf50';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(hx, hy, hr * 1.4, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+            ctx.stroke();
+
+            // 剩余时间
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 10px "Microsoft YaHei"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(he.timer.toFixed(1) + 's', hx, hy);
+        }
+
+        // 画飞行鸡蛋
+        for (const egg of this.eggs) {
+            const ex = egg.x * SCALE;
+            const ey = egg.y * SCALE;
+            const er = egg.radius * SCALE;
+
+            // 光晕
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.beginPath();
+            ctx.arc(ex, ey, er * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 鸡蛋主体
+            ctx.fillStyle = '#fffef0';
+            ctx.beginPath();
+            ctx.ellipse(ex, ey, er, er * 1.25, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#e0d8b0';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // 画激光束
+        if (this.laserBeam) {
+            const lb = this.laserBeam;
+            const alpha = Math.min(1, lb.timer / 0.15); // 淡出效果
+
+            // 外层光晕
+            ctx.strokeStyle = `rgba(255, 50, 50, ${0.3 * alpha})`;
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.moveTo(lb.x1 * SCALE, lb.y1 * SCALE);
+            ctx.lineTo(lb.x2 * SCALE, lb.y2 * SCALE);
+            ctx.stroke();
+
+            // 中层光束
+            ctx.strokeStyle = `rgba(255, 100, 50, ${0.6 * alpha})`;
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(lb.x1 * SCALE, lb.y1 * SCALE);
+            ctx.lineTo(lb.x2 * SCALE, lb.y2 * SCALE);
+            ctx.stroke();
+
+            // 核心光束
+            ctx.strokeStyle = `rgba(255, 255, 200, ${alpha})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(lb.x1 * SCALE, lb.y1 * SCALE);
+            ctx.lineTo(lb.x2 * SCALE, lb.y2 * SCALE);
+            ctx.stroke();
+        }
+
+            // 画实体
+        for (const c of this.chickens) {
+            this._drawEntity(c, '#ffc107', IMG_CHICKEN);
+        }
+        this._drawEntity(this.wolf, '#616161', IMG_WOLF);
+
+        // 狼蓄力视觉特效
+        if (this.wolf && this.wolf.laserCharge > 0) {
+            const wx = this.wolf.x * SCALE;
+            const wy = this.wolf.y * SCALE;
+            const chargeProgress = 1 - (this.wolf.laserCharge / config.laserChargeTime);
+
+            // 蓄力光环（脉冲）
+            const pulseR = (30 + Math.sin(this.elapsedTime * 15) * 10 + chargeProgress * 20) * SCALE / 60;
+            const alpha = 0.3 + Math.sin(this.elapsedTime * 10) * 0.2;
+            ctx.strokeStyle = `rgba(255, 50, 50, ${alpha})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(wx, wy, pulseR, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 内圈
+            ctx.strokeStyle = `rgba(255, 150, 50, ${alpha * 0.7})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(wx, wy, pulseR * 0.6, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 目标准星（蓄力时显示记录的鸡位置）
+            const tx = this.wolf.laserTargetX * SCALE;
+            const ty = this.wolf.laserTargetY * SCALE;
+            const crossSize = 10;
+            ctx.strokeStyle = `rgba(255, 0, 0, ${0.4 + Math.sin(this.elapsedTime * 8) * 0.3})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(tx - crossSize, ty);
+            ctx.lineTo(tx + crossSize, ty);
+            ctx.moveTo(tx, ty - crossSize);
+            ctx.lineTo(tx, ty + crossSize);
+            ctx.stroke();
+
+            // 目标圆圈
+            ctx.strokeStyle = `rgba(255, 50, 50, ${0.3 + Math.sin(this.elapsedTime * 8) * 0.2})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(tx, ty, crossSize * 0.8, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    },
+
+    _drawEntity(entity, color, img) {
+        if (!entity) return;
+        const x = entity.x * SCALE;
+        const y = entity.y * SCALE;
+        const halfPx = entity.half * SCALE;
+
+        // 受击闪烁
+        if (entity.flashTimer > 0 && Math.floor(entity.flashTimer * 30) % 2 === 0) {
+            ctx.globalAlpha = 0.4;
+        }
+
+        // 阴影
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(x + 3, y + halfPx - 2, halfPx * 0.9, halfPx * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 主体图片
+        if (img && img.naturalWidth > 0) {
+            ctx.drawImage(img, x - halfPx, y - halfPx, halfPx * 2, halfPx * 2);
+        } else {
+            // 图片未加载时的后备色块
+            ctx.fillStyle = color;
+            ctx.fillRect(x - halfPx, y - halfPx, halfPx * 2, halfPx * 2);
+            ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x - halfPx, y - halfPx, halfPx * 2, halfPx * 2);
+        }
+
+        ctx.globalAlpha = 1;
+
+        // 血条
+        const hpBarW = halfPx * 2;
+        const hpBarH = 6;
+        const hpBarY = y - halfPx - 12;
+        const hpRatio = Math.max(0, entity.hp / entity.maxHp);
+
+        // 血条背景
+        ctx.fillStyle = '#333';
+        ctx.fillRect(x - halfPx, hpBarY, hpBarW, hpBarH);
+
+        // 血条前景
+        const hpColor = hpRatio > 0.5 ? '#4caf50' : hpRatio > 0.25 ? '#ff9800' : '#f44336';
+        ctx.fillStyle = hpColor;
+        ctx.fillRect(x - halfPx, hpBarY, hpBarW * hpRatio, hpBarH);
+
+        // 血条边框
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - halfPx, hpBarY, hpBarW, hpBarH);
+
+        // HP 数字
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px "Microsoft YaHei"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${entity.hp}`, x, hpBarY + hpBarH / 2 + 1);
+    },
+
+    updateDisplay() {
+        const count = this.chickens.length;
+        const firstHp = count > 0 ? this.chickens[0].hp : 0;
+        document.getElementById('chickenHpDisplay').textContent = count > 1
+            ? `${firstHp} (×${count})` : String(firstHp);
+        document.getElementById('wolfHpDisplay').textContent = Math.max(0, this.wolf.hp);
+        document.getElementById('timeDisplay').textContent = this.elapsedTime.toFixed(1) + 's';
+    },
+};
+
+// ==================== 初始化 ====================
+game.reset();
+game.draw();
+
+// 每 50ms 绘制一次鸡蛋轨迹（更平滑）
+setInterval(() => {
+    if (game.running && !game.paused && !game.gameOver) {
+        game.draw();
+    }
+}, 50);
+</script>
+</body>
+</html>
