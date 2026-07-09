@@ -122,6 +122,62 @@ canvas {
 .status-item .value { font-size: 22px; font-weight: bold; }
 .status-item.chicken .value { color: #ffc107; }
 .status-item.wolf .value { color: #9e9e9e; }
+/* ===== 配置管理器 ===== */
+.config-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    background: #12122a;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #2a2a4a;
+    width: 100%;
+}
+.config-bar label { color: #888; font-size: 12px; white-space: nowrap; }
+.config-bar select {
+    background: #1a1a3e;
+    color: #ccc;
+    border: 1px solid #2a2a4a;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    outline: none;
+    min-width: 140px;
+    max-width: 200px;
+}
+.config-bar select:focus { border-color: #e94560; }
+.config-bar input[type="text"] {
+    background: #1a1a3e;
+    color: #ccc;
+    border: 1px solid #2a2a4a;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    outline: none;
+    width: 140px;
+}
+.config-bar input[type="text"]:focus { border-color: #e94560; }
+.config-bar input::placeholder { color: #555; }
+.config-bar .btn-sm {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: 0.2s;
+    white-space: nowrap;
+    min-width: 36px;
+    text-align: center;
+}
+.btn-save { background: #e94560; color: #fff; }
+.btn-save:hover { background: #c73550; }
+.btn-del { background: #3a1020; color: #c44; }
+.btn-del:hover { background: #5a1530; }
+.btn-default { background: #1a2a1a; color: #6a6; }
+.btn-default:hover { background: #2a3a2a; }
+
 .result-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -158,14 +214,135 @@ canvas {
     transition: 0.2s;
 }
 .btn-restart:hover { background: #c73550; }
+
+/* ==================== 移动端适配 ==================== */
+@media (max-width: 768px) {
+    body {
+        padding: 0;
+        align-items: flex-start;
+        min-height: auto;
+    }
+    .container {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        max-width: 100vw;
+        padding: 6px;
+    }
+    /* 配置栏移动端：两行布局 */
+    .config-bar {
+        gap: 6px;
+        padding: 8px 10px;
+        border-radius: 8px;
+    }
+    .config-bar .config-label { display: none; }
+    .config-bar select {
+        flex: 2;
+        min-width: 0;
+        max-width: none;
+        font-size: 14px;
+        padding: 10px 8px;
+    }
+    .config-bar input[type="text"] {
+        flex: 2;
+        width: auto;
+        min-width: 0;
+        font-size: 14px;
+        padding: 10px 8px;
+    }
+    .config-bar .btn-sm {
+        flex: 0 0 auto;
+        padding: 10px 12px;
+        font-size: 13px;
+        border-radius: 8px;
+    }
+    /* 面板移动端 */
+    .panel {
+        width: 100%;
+        padding: 12px;
+        max-height: none;
+    }
+    .panel h2 {
+        font-size: 15px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        user-select: none;
+    }
+    .panel h2::after {
+        content: ' ▼';
+        font-size: 10px;
+        color: #666;
+    }
+    .panel.collapsed h2::after {
+        content: ' ▶';
+    }
+    .panel.collapsed .panel-content {
+        display: none;
+    }
+    .panel h3 { font-size: 12px; margin: 8px 0 6px; }
+    .panel label { font-size: 11px; }
+    .panel input {
+        padding: 10px 8px;
+        font-size: 16px; /* 防止 iOS 缩放 */
+        margin-bottom: 6px;
+    }
+    /* 中间区域 */
+    .center-area {
+        width: 100%;
+        gap: 6px;
+    }
+    .status-bar {
+        width: 100%;
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+    .status-item .value { font-size: 18px; }
+    canvas {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+    }
+    .controls {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .btn {
+        padding: 14px 6px;
+        font-size: 15px;
+        border-radius: 8px;
+        min-width: 0;
+    }
+    .controls .btn-mute { flex: 0.5; }
+    /* 结果弹窗 */
+    .result-text { font-size: 36px; }
+    .result-sub { font-size: 16px; }
+    .btn-restart {
+        padding: 14px 36px;
+        font-size: 16px;
+    }
+}
 </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- 配置管理器 -->
+    <div class="config-bar" id="configBar">
+        <label class="config-label">📋 配置</label>
+        <select id="configSelect" onchange="onConfigSelect()">
+            <option value="">-- 选择配置 --</option>
+        </select>
+        <input type="text" id="configName" placeholder="配置名称" maxlength="20">
+        <button class="btn-sm btn-save" onclick="saveConfig()">💾</button>
+        <button class="btn-sm btn-del" onclick="deleteConfig()">🗑</button>
+        <button class="btn-sm btn-default" onclick="resetToDefault()">↺</button>
+    </div>
+
     <!-- 左侧面板：狼 -->
     <div class="panel wolf-panel">
         <h2>🐺 狼</h2>
+        <div class="panel-content">
         <h3>基础属性</h3>
         <label>体型 (米×米)</label>
         <input type="number" id="wolfSize" value="2" min="0.5" step="0.1">
@@ -189,6 +366,7 @@ canvas {
         <input type="number" id="wolfKillHeal" value="50" min="0" step="5">
         <label>吃蛋回血</label>
         <input type="number" id="eggHealAmount" value="30" min="0" step="5">
+        </div>
     </div>
 
     <!-- 中间：决战平台 -->
@@ -219,6 +397,7 @@ canvas {
     <!-- 右侧面板：鸡 -->
     <div class="panel chicken-panel">
         <h2>🐔 鸡</h2>
+        <div class="panel-content">
         <h3>基础属性</h3>
         <label>体型 (米×米)</label>
         <input type="number" id="chickenSize" value="1" min="0.5" step="0.1">
@@ -240,6 +419,7 @@ canvas {
         <input type="number" id="hatchInterval" value="10" min="1" step="1">
         <label>孵化时间 (秒)</label>
         <input type="number" id="hatchTime" value="3" min="0.5" step="0.5">
+        </div>
     </div>
 </div>
 
@@ -255,7 +435,39 @@ canvas {
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const SCALE = 60; // pixels per meter
+let SCALE = 60; // pixels per meter, 移动端自适应
+
+// ==================== Canvas 自适应 ====================
+const MAX_CANVAS = 600;
+function resizeCanvas() {
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        const size = Math.min(window.innerWidth - 16, MAX_CANVAS);
+        canvas.style.width = size + 'px';
+        canvas.style.height = size + 'px';
+        canvas.width = size;
+        canvas.height = size;
+        SCALE = size / 10; // world is 10x10
+    } else {
+        canvas.style.width = '';
+        canvas.style.height = '';
+        canvas.width = MAX_CANVAS;
+        canvas.height = MAX_CANVAS;
+        SCALE = 60;
+    }
+}
+window.addEventListener('resize', () => {
+    resizeCanvas();
+    if (game && !game.running && game.draw) game.draw();
+});
+
+// ==================== 移动端面板折叠 ====================
+document.querySelectorAll('.panel h2').forEach(h2 => {
+    h2.addEventListener('click', () => {
+        h2.parentElement.classList.toggle('collapsed');
+    });
+});
+
 
 // 默认配置
 const DEFAULTS = {
@@ -292,10 +504,52 @@ IMG_WOLF.onload = () => { if (game && game.draw) game.draw(); };
 const IMG_CHICKEN = new Image();
 IMG_CHICKEN.src = 'chicken.png';
 IMG_CHICKEN.onload = () => { if (game && game.draw) game.draw(); };
+const IMG_EGG = new Image();
+IMG_EGG.src = 'egg.png';
+IMG_EGG.onload = () => { if (game && game.draw) game.draw(); };
+const IMG_BG = new Image();
+IMG_BG.src = '草地.jpeg';
+IMG_BG.onload = () => { if (game && game.draw) game.draw(); };
 
 // ==================== 音效系统 ====================
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
+
+// 母鸡音效预加载池（防止单次 Audio 被 GC 或不复用）
+const CLUCK_POOL = [];
+const CLUCK_POOL_SIZE = 3;
+for (let i = 0; i < CLUCK_POOL_SIZE; i++) {
+    const a = new Audio('母鸡咯咯叫.mp3');
+    a.volume = 0.7;
+    a.preload = 'auto';
+    a.load();
+    CLUCK_POOL.push(a);
+}
+let _cluckIdx = 0;
+
+// 狼嚎音效预加载池
+const HOWL_POOL = [];
+const HOWL_POOL_SIZE = 2;
+for (let i = 0; i < HOWL_POOL_SIZE; i++) {
+    const a = new Audio('狼嚎叫.mp3');
+    a.volume = 0.7;
+    a.preload = 'auto';
+    a.load();
+    HOWL_POOL.push(a);
+}
+let _howlIdx = 0;
+
+// 激光发射音效预加载池
+const LASER_POOL = [];
+const LASER_POOL_SIZE = 2;
+for (let i = 0; i < LASER_POOL_SIZE; i++) {
+    const a = new Audio('激光发射.mp3');
+    a.volume = 0.7;
+    a.preload = 'auto';
+    a.load();
+    LASER_POOL.push(a);
+}
+let _laserIdx = 0;
 
 const SFX = {
     muted: false,
@@ -353,13 +607,34 @@ const SFX = {
         } catch (e) { /* ignore */ }
     },
 
-    eggLaunch()  { this._tone(350, 0.1, 'sine', 0.15, 700); },
+    // 母鸡下蛋"咯咯"叫声：从预加载池取出播放
+    eggLaunch() {
+        if (this.muted) return;
+        const a = CLUCK_POOL[_cluckIdx];
+        _cluckIdx = (_cluckIdx + 1) % CLUCK_POOL_SIZE;
+        a.currentTime = 0;
+        a.play().catch(() => {});
+    },
     eggHit()     { this._noise(0.1, 0.2, 2500); },
     wolfBite()   { this._tone(90, 0.2, 'sawtooth', 0.18, 35); },
     wallBounce() { this._tone(130, 0.05, 'triangle', 0.08); },
     collide()    { this._tone(200, 0.06, 'triangle', 0.12); },
-    wolfRoar()   { this._tone(60, 0.4, 'sawtooth', 0.25, 25); },
-    laserZap()   { this._tone(2000, 0.15, 'square', 0.12, 4000); },
+    // 狼嚎：播放真实录音 狼嚎叫.mp3
+    wolfRoar() {
+        if (this.muted) return;
+        const a = HOWL_POOL[_howlIdx];
+        _howlIdx = (_howlIdx + 1) % HOWL_POOL_SIZE;
+        a.currentTime = 0;
+        a.play().catch(() => {});
+    },
+    // 激光发射：播放真实录音 激光发射.mp3
+    laserZap() {
+        if (this.muted) return;
+        const a = LASER_POOL[_laserIdx];
+        _laserIdx = (_laserIdx + 1) % LASER_POOL_SIZE;
+        a.currentTime = 0;
+        a.play().catch(() => {});
+    },
 
     gameWin() {
         this._tone(523, 0.15, 'sine', 0.18);
@@ -397,6 +672,96 @@ function readConfig() {
     config.wolfSize = parseFloat(document.getElementById('wolfSize').value) || 2;
     config.wolfKillHeal = parseInt(document.getElementById('wolfKillHeal').value) || 50;
 }
+
+// 所有可配置参数的 ID 列表（与 HTML input id 对应）
+const CONFIG_IDS = [
+    'chickenHP', 'wolfHP', 'eggDamage', 'wolfDamage',
+    'chickenSpeed', 'wolfSpeed', 'eggSpeed', 'eggCooldown',
+    'laserCooldown', 'laserChargeTime', 'laserDamage',
+    'hatchInterval', 'hatchTime', 'eggHealAmount',
+    'chickenSize', 'wolfSize', 'wolfKillHeal'
+];
+
+// localStorage 存储 key
+const STORAGE_KEY = 'jivslang_configs';
+
+// 获取所有已保存的配置
+function getAllConfigs() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch (e) { return {}; }
+}
+
+// 刷新下拉列表
+function refreshConfigSelect() {
+    const sel = document.getElementById('configSelect');
+    const configs = getAllConfigs();
+    sel.innerHTML = '<option value="">-- 选择配置 --</option>';
+    Object.keys(configs).sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+    });
+}
+
+// 下拉选择时自动加载配置
+function onConfigSelect() {
+    const name = document.getElementById('configSelect').value;
+    if (!name) return;
+    const configs = getAllConfigs();
+    if (!configs[name]) return;
+    applyConfig(configs[name]);
+    document.getElementById('configName').value = '';
+}
+
+// 将当前 config 写入 UI 输入框
+function applyConfig(cfg) {
+    CONFIG_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && cfg[id] !== undefined) el.value = cfg[id];
+    });
+    readConfig();
+}
+
+// 保存当前配置到 localStorage
+function saveConfig() {
+    let name = document.getElementById('configName').value.trim();
+    if (!name) { alert('请输入配置名称'); return; }
+    readConfig();
+    const configs = getAllConfigs();
+    const snapshot = {};
+    CONFIG_IDS.forEach(id => { snapshot[id] = config[id]; });
+    configs[name] = snapshot;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(configs));
+    refreshConfigSelect();
+    document.getElementById('configSelect').value = name;
+    document.getElementById('configName').value = '';
+    alert(`配置 "${name}" 已保存`);
+}
+
+// 删除选中配置
+function deleteConfig() {
+    const name = document.getElementById('configSelect').value;
+    if (!name) { alert('请先选择要删除的配置'); return; }
+    if (!confirm(`确定删除配置 "${name}"？`)) return;
+    const configs = getAllConfigs();
+    delete configs[name];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(configs));
+    refreshConfigSelect();
+    document.getElementById('configName').value = '';
+    alert(`配置 "${name}" 已删除`);
+}
+
+// 恢复默认参数
+function resetToDefault() {
+    if (!confirm('确定恢复所有参数为默认值？')) return;
+    applyConfig(DEFAULTS);
+    document.getElementById('configName').value = '';
+}
+
+// 页面加载时刷新下拉列表
+refreshConfigSelect();
 
 // ==================== 实体类 ====================
 
@@ -547,6 +912,7 @@ const game = {
 
     reset() {
         readConfig();
+        resizeCanvas();
         this.running = false;
         this.paused = false;
         this.gameOver = false;
@@ -961,19 +1327,12 @@ const game = {
         const H = canvas.height;
         ctx.clearRect(0, 0, W, H);
 
-        // 背景 - 鸡舍地板
-        ctx.fillStyle = '#d4a574';
-        ctx.fillRect(0, 0, W, H);
-
-        // 木纹纹理
-        ctx.strokeStyle = '#c49564';
-        ctx.lineWidth = 0.5;
-        for (let i = 0; i < config.worldW; i++) {
-            const x = i * SCALE;
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, H);
-            ctx.stroke();
+        // 背景 - 草地
+        if (IMG_BG.naturalWidth > 0) {
+            ctx.drawImage(IMG_BG, 0, 0, W, H);
+        } else {
+            ctx.fillStyle = '#4a7c3f';
+            ctx.fillRect(0, 0, W, H);
         }
 
         // 墙壁
@@ -1011,13 +1370,14 @@ const game = {
             ctx.fill();
 
             // 主体
-            ctx.fillStyle = '#fffef0';
-            ctx.beginPath();
-            ctx.ellipse(hx, hy, hr, hr * 1.25, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#d4a017';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+            if (IMG_EGG.naturalWidth > 0) {
+                ctx.drawImage(IMG_EGG, hx - hr * 1.2, hy - hr * 1.5, hr * 2.4, hr * 3);
+            } else {
+                ctx.fillStyle = '#fffef0';
+                ctx.beginPath();
+                ctx.ellipse(hx, hy, hr, hr * 1.25, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
             // 进度环
             ctx.strokeStyle = '#4caf50';
@@ -1040,20 +1400,21 @@ const game = {
             const ey = egg.y * SCALE;
             const er = egg.radius * SCALE;
 
-            // 光晕
-            ctx.fillStyle = 'rgba(255,255,255,0.3)';
-            ctx.beginPath();
-            ctx.arc(ex, ey, er * 2, 0, Math.PI * 2);
-            ctx.fill();
-
-            // 鸡蛋主体
-            ctx.fillStyle = '#fffef0';
-            ctx.beginPath();
-            ctx.ellipse(ex, ey, er, er * 1.25, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#e0d8b0';
-            ctx.lineWidth = 1;
-            ctx.stroke();
+            // 鸡蛋主体：尖头永远指向狼（运动方向）
+            // egg.png 顶部为尖头（朝上），旋转角让尖头对准速度方向
+            const ang = Math.atan2(egg.vx, -egg.vy);
+            ctx.save();
+            ctx.translate(ex, ey);
+            ctx.rotate(ang);
+            if (IMG_EGG.naturalWidth > 0) {
+                ctx.drawImage(IMG_EGG, -er * 1.2, -er * 1.5, er * 2.4, er * 3);
+            } else {
+                ctx.fillStyle = '#fffef0';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, er, er * 1.25, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
         }
 
         // 画激光束
