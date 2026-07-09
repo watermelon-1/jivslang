@@ -334,9 +334,9 @@ canvas {
             <option value="">-- 选择配置 --</option>
         </select>
         <input type="text" id="configName" placeholder="配置名称" maxlength="20">
-        <button class="btn-sm btn-save" onclick="saveConfig()">💾</button>
-        <button class="btn-sm btn-del" onclick="deleteConfig()">🗑</button>
-        <button class="btn-sm btn-default" onclick="resetToDefault()">↺</button>
+        <button class="btn-sm btn-save" onclick="saveConfig()">保存</button>
+        <button class="btn-sm btn-del" onclick="deleteConfig()">删除</button>
+        <button class="btn-sm btn-default" onclick="resetToDefault()">默认</button>
     </div>
 
     <!-- 左侧面板：狼 -->
@@ -744,7 +744,7 @@ function saveConfig() {
 function deleteConfig() {
     const name = document.getElementById('configSelect').value;
     if (!name) { alert('请先选择要删除的配置'); return; }
-    if (!confirm(`确定删除配置 "${name}"？`)) return;
+    // 直接删除
     const configs = getAllConfigs();
     delete configs[name];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(configs));
@@ -755,7 +755,7 @@ function deleteConfig() {
 
 // 恢复默认参数
 function resetToDefault() {
-    if (!confirm('确定恢复所有参数为默认值？')) return;
+    // 直接恢复默认
     applyConfig(DEFAULTS);
     document.getElementById('configName').value = '';
 }
@@ -909,6 +909,7 @@ const game = {
     elapsedTime: 0,
     lastTime: 0,
     laserBeam: null,
+    floatTexts: [], // 浮动伤害/回血文字
 
     reset() {
         readConfig();
@@ -921,6 +922,7 @@ const game = {
         this.elapsedTime = 0;
         this.lastTime = 0;
         this.laserBeam = null;
+        this.floatTexts = [];
 
         document.getElementById('resultOverlay').classList.remove('show');
         document.getElementById('btnPause').textContent = '⏸ 暂停';
@@ -1047,6 +1049,7 @@ const game = {
                     c.hp -= config.wolfDamage;
                     c.flashTimer = 0.15;
                     w.atkCooldown = config.wolfAtkCooldown;
+                    this._addFloatText(c.x, c.y - c.half, '-' + config.wolfDamage, '#ff4444');
                     SFX.wolfBite();
                 }
             }
@@ -1077,6 +1080,7 @@ const game = {
                             if (c.hp > 0 && this._rayHitsAABB(w.x, w.y, lnx, lny, c)) {
                                 c.hp -= config.laserDamage;
                                 c.flashTimer = 0.2;
+                                this._addFloatText(c.x, c.y - c.half, '-' + config.laserDamage, '#ff4444');
                             }
                         }
                         // 激光命中孵化蛋 → 蛋消失，狼回血
@@ -1084,6 +1088,7 @@ const game = {
                             if (he.alive && this._rayHitsCircle(w.x, w.y, lnx, lny, he.x, he.y, he.radius)) {
                                 w.hp = Math.min(w.maxHp, w.hp + config.eggHealAmount);
                                 he.alive = false;
+                                this._addFloatText(w.x, w.y - w.half, '+' + config.eggHealAmount, '#1a7a2e');
                                 SFX.eggHit();
                             }
                         }
@@ -1134,6 +1139,7 @@ const game = {
                 w.hp -= config.eggDamage;
                 w.flashTimer = 0.15;
                 egg.alive = false;
+                this._addFloatText(w.x, w.y - w.half, '-' + config.eggDamage, '#ff4444');
                 SFX.eggHit();
             }
         }
@@ -1147,6 +1153,7 @@ const game = {
                 w.hp = Math.min(w.maxHp, w.hp + config.eggHealAmount);
                 he.alive = false;
                 w.atkCooldown = config.wolfAtkCooldown;
+                this._addFloatText(w.x, w.y - w.half, '+' + config.eggHealAmount, '#1a7a2e');
                 SFX.eggHit();
             }
             // 孵化完成 → 生成新鸡
@@ -1167,6 +1174,7 @@ const game = {
         const deadCount = this.chickens.filter(c => c.hp <= 0).length;
         if (deadCount > 0) {
             w.hp = Math.min(w.maxHp, w.hp + config.wolfKillHeal * deadCount);
+            this._addFloatText(w.x, w.y - w.half, '+' + (config.wolfKillHeal * deadCount), '#1a7a2e');
         }
         this.chickens = this.chickens.filter(c => c.hp > 0);
 
@@ -1177,6 +1185,13 @@ const game = {
         }
 
         // 检查胜负
+        // 更新浮动文字
+        for (const ft of this.floatTexts) {
+            ft.timer -= dt;
+            ft.y += ft.vy * dt;
+        }
+        this.floatTexts = this.floatTexts.filter(ft => ft.timer > 0);
+
         this._checkGameEnd();
     },
 
@@ -1277,6 +1292,11 @@ const game = {
             b.vy -= 2 * b_vn * ny;
             SFX.collide();
         }
+    },
+
+    // 添加浮动伤害/回血文字
+    _addFloatText(x, y, text, color) {
+        this.floatTexts.push({ x, y, text, color, timer: 1.0, vy: -1.5 });
     },
 
     _checkGameEnd() {
@@ -1452,6 +1472,21 @@ const game = {
             this._drawEntity(c, '#ffc107', IMG_CHICKEN);
         }
         this._drawEntity(this.wolf, '#616161', IMG_WOLF);
+
+        // 浮动伤害/回血文字
+        for (const ft of this.floatTexts) {
+            const alpha = Math.min(1, ft.timer / 0.5);
+            const sx = ft.x * SCALE;
+            const sy = ft.y * SCALE;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = ft.color;
+            ctx.font = ft.text.startsWith('+') ? 'bold 24px "Microsoft YaHei"' : 'bold 18px "Microsoft YaHei"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(ft.text, sx, sy);
+            ctx.restore();
+        }
 
         // 狼蓄力视觉特效
         if (this.wolf && this.wolf.laserCharge > 0) {
