@@ -133,7 +133,6 @@ canvas {
     border-radius: 10px;
     margin-bottom: 12px;
     border: 1px solid #2a2a4a;
-    width: 100%;
 }
 .config-bar label { color: #888; font-size: 12px; white-space: nowrap; }
 .config-bar select {
@@ -327,18 +326,6 @@ canvas {
 <body>
 
 <div class="container">
-    <!-- 配置管理器 -->
-    <div class="config-bar" id="configBar">
-        <label class="config-label">📋 配置</label>
-        <select id="configSelect" onchange="onConfigSelect()">
-            <option value="">-- 选择配置 --</option>
-        </select>
-        <input type="text" id="configName" placeholder="配置名称" maxlength="20">
-        <button class="btn-sm btn-save" onclick="saveConfig()">保存</button>
-        <button class="btn-sm btn-del" onclick="deleteConfig()">删除</button>
-        <button class="btn-sm btn-default" onclick="resetToDefault()">默认</button>
-    </div>
-
     <!-- 左侧面板：狼 -->
     <div class="panel wolf-panel">
         <h2>🐺 狼</h2>
@@ -371,6 +358,18 @@ canvas {
 
     <!-- 中间：决战平台 -->
     <div class="center-area">
+        <!-- 配置管理器 -->
+        <div class="config-bar" id="configBar">
+            <label class="config-label">📋 配置</label>
+            <select id="configSelect" onchange="onConfigSelect()">
+                <option value="">-- 选择配置 --</option>
+            </select>
+            <input type="text" id="configName" placeholder="配置名称" maxlength="20">
+            <button class="btn-sm btn-save" onclick="saveConfig()">保存</button>
+            <button class="btn-sm btn-del" onclick="deleteConfig()">删除</button>
+            <button class="btn-sm btn-default" onclick="resetToDefault()">默认</button>
+        </div>
+
         <div class="status-bar">
             <div class="status-item chicken">
                 <div class="label">🐔 鸡</div>
@@ -826,7 +825,7 @@ class Chicken extends Entity {
         super(x, y, vx, vy, config.chickenSize);
         this.hp = config.chickenHP;
         this.maxHp = config.chickenHP;
-        this.eggTimer = 0;
+        this.eggTimer = config.eggCooldown;
         this.flashTimer = 0;
         this.hatchTimer = 0;
     }
@@ -1443,7 +1442,7 @@ const game = {
             const alpha = Math.min(1, lb.timer / 0.15); // 淡出效果
 
             // 外层光晕
-            ctx.strokeStyle = `rgba(255, 50, 50, ${0.3 * alpha})`;
+            ctx.strokeStyle = `rgba(50, 100, 255, ${0.3 * alpha})`;
             ctx.lineWidth = 10;
             ctx.beginPath();
             ctx.moveTo(lb.x1 * SCALE, lb.y1 * SCALE);
@@ -1451,7 +1450,7 @@ const game = {
             ctx.stroke();
 
             // 中层光束
-            ctx.strokeStyle = `rgba(255, 100, 50, ${0.6 * alpha})`;
+            ctx.strokeStyle = `rgba(80, 150, 255, ${0.6 * alpha})`;
             ctx.lineWidth = 5;
             ctx.beginPath();
             ctx.moveTo(lb.x1 * SCALE, lb.y1 * SCALE);
@@ -1459,7 +1458,7 @@ const game = {
             ctx.stroke();
 
             // 核心光束
-            ctx.strokeStyle = `rgba(255, 255, 200, ${alpha})`;
+            ctx.strokeStyle = `rgba(180, 220, 255, ${alpha})`;
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(lb.x1 * SCALE, lb.y1 * SCALE);
@@ -1497,14 +1496,14 @@ const game = {
             // 蓄力光环（脉冲）
             const pulseR = (30 + Math.sin(this.elapsedTime * 15) * 10 + chargeProgress * 20) * SCALE / 60;
             const alpha = 0.3 + Math.sin(this.elapsedTime * 10) * 0.2;
-            ctx.strokeStyle = `rgba(255, 50, 50, ${alpha})`;
+            ctx.strokeStyle = `rgba(50, 100, 255, ${alpha})`;
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.arc(wx, wy, pulseR, 0, Math.PI * 2);
             ctx.stroke();
 
             // 内圈
-            ctx.strokeStyle = `rgba(255, 150, 50, ${alpha * 0.7})`;
+            ctx.strokeStyle = `rgba(100, 160, 255, ${alpha * 0.7})`;
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.arc(wx, wy, pulseR * 0.6, 0, Math.PI * 2);
@@ -1514,7 +1513,7 @@ const game = {
             const tx = this.wolf.laserTargetX * SCALE;
             const ty = this.wolf.laserTargetY * SCALE;
             const crossSize = 10;
-            ctx.strokeStyle = `rgba(255, 0, 0, ${0.4 + Math.sin(this.elapsedTime * 8) * 0.3})`;
+            ctx.strokeStyle = `rgba(30, 80, 255, ${0.4 + Math.sin(this.elapsedTime * 8) * 0.3})`;
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(tx - crossSize, ty);
@@ -1524,7 +1523,7 @@ const game = {
             ctx.stroke();
 
             // 目标圆圈
-            ctx.strokeStyle = `rgba(255, 50, 50, ${0.3 + Math.sin(this.elapsedTime * 8) * 0.2})`;
+            ctx.strokeStyle = `rgba(50, 100, 255, ${0.3 + Math.sin(this.elapsedTime * 8) * 0.2})`;
             ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.arc(tx, ty, crossSize * 0.8, 0, Math.PI * 2);
